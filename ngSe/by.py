@@ -23,14 +23,14 @@ class ByDict(dict):
 
     def __getitem__(self, item):
         # Performs generation of NegativeByClause's
-        if isinstance(item, basestring):
+        if isinstance(item, str):
             if item.startswith(self.negative_prefix):
                 return NegativeByClause(self[item[len(self.negative_prefix):]])
         return super(ByDict, self).__getitem__(item)
 
     def __setitem__(self, key, value):
         # Prevent inaccessible keys from getting in
-        if isinstance(key, basestring):
+        if isinstance(key, str):
             if key.startswith(self.negative_prefix):
                 raise ValueError("Keys in this dict cannot start with '{}'".format(self.negative_prefix))
         super(ByDict, self).__setitem__(key, value)
@@ -39,8 +39,8 @@ class ByDict(dict):
 By = ByDict()
 # Is this the best way to do this? Allow retrieving key: None = value: None (for simplifying step parsing)
 By[None] = None
-for key, value in selenium_by.__dict__.iteritems():
-    if not key.startswith('__') and isinstance(value, basestring):
+for key, value in selenium_by.__dict__.items():
+    if not key.startswith('__') and isinstance(value, str):
         By[key] = value
 
 
@@ -57,7 +57,7 @@ class ByClause(object):
 
     def __init__(self, by, f):
         # Contract
-        must_be(by, "by", basestring)
+        must_be(by, "by", str)
         if not hasattr(f, "__call__"):
             raise ValueError("f must be a callable")
         #
@@ -77,7 +77,7 @@ class ByClause(object):
         This is put here to be override-able, so you can, say, wait for the element to 'leave'
         """
         # Contract
-        must_be(what, "what", basestring)
+        must_be(what, "what", str)
         must_be(browser, "browser", Remote)
         #
         return self.find(what, browser)
@@ -86,7 +86,7 @@ class ByClause(object):
         """Finds the desired element (what) in the provided browser
         """
         # Contract
-        must_be(what, "what", basestring)
+        must_be(what, "what", str)
         must_be(browser, "browser", Remote)
         #
         what = self.convert(what)
@@ -113,7 +113,7 @@ class NegativeByClause(ByClause):
         """Waits for the desired element to 'leave'. Or tries to.
         """
         # Contract
-        must_be(what, "what", basestring)
+        must_be(what, "what", str)
         must_be(browser, "browser", Remote)
         #
         try:
@@ -126,7 +126,7 @@ class NegativeByClause(ByClause):
 
 def _inner_text_convert(value):
     # Contract
-    must_be(value, "value", basestring)
+    must_be(value, "value", str)
     #
     parts = value.split('\\')
     text = parts.pop()
@@ -138,7 +138,7 @@ def _inner_text_convert(value):
 
 def _table_path_convert(path):
     # Contract
-    must_be(path, "path", basestring)
+    must_be(path, "path", str)
     #
     parts = path.split('\\')
     if len(parts) < 3:
@@ -174,7 +174,7 @@ def _table_path_convert(path):
 
 def _list_path_convert(path):
     # Contract
-    must_be(path, "path", basestring)
+    must_be(path, "path", str)
     #
     parts = path.split('\\')
     if len(parts) < 2:
@@ -202,8 +202,8 @@ def _list_path_convert(path):
 By = ByDict()
 # Is this the best way to do this? Allow retrieving key: None = value: None (for simplifying step parsing)
 By[None] = None
-for key, value in selenium_by.__dict__.iteritems():
-    if not key.startswith('__') and isinstance(value, basestring):
+for key, value in selenium_by.__dict__.items():
+    if not key.startswith('__') and isinstance(value, str):
         By[key] = ByClause(value, lambda v: v)
 
 By.INNER_TEXT = ByClause(selenium_by.XPATH, _inner_text_convert)
