@@ -1,9 +1,8 @@
 from time import sleep
 from numbers import Number
-from types import NoneType
 from atexit import register as register_exit
 
-from urllib2 import URLError
+from urllib.error import URLError
 from selenium.webdriver import Chrome
 import selenium.common.exceptions as selenium_exceptions
 from selenium.webdriver.remote.webelement import WebElement
@@ -28,15 +27,15 @@ class Browser(Chrome):
     def __init__(self, scenario, download_directory=default_download_directory, app_host=None, app_port=None,
                  executable_path=None, pages=None):
         # Contract
-        must_be(download_directory, "download_directory", (NoneType, basestring))
-        must_be(app_host, "app_host", (NoneType, basestring))
-        must_be(app_port, "app_port", (NoneType, Number))
-        must_be(executable_path, "executable_path", (NoneType, basestring))
-        must_be(pages, "pages", (dict, NoneType))
+        must_be(download_directory, "download_directory", (type(None), str))
+        must_be(app_host, "app_host", (type(None), str))
+        must_be(app_port, "app_port", (type(None), Number))
+        must_be(executable_path, "executable_path", (type(None), str))
+        must_be(pages, "pages", (dict, type(None)))
         # TODO[TJ]: This should be implemented as part of the future contracts library
         if pages is not None:
-            for key, value in pages.iteritems():
-                must_be(key, "pages key", basestring)
+            for key, value in pages.items():
+                must_be(key, "pages key", str)
                 must_be(value, "pages value", AppPage)
         #
         self.scenario = scenario
@@ -72,7 +71,7 @@ class Browser(Chrome):
         This is really just a wrapper around passing the browser to a ByClause, allowing for much cleaner syntax.
         """
         # Contract
-        must_be(value, "value", basestring)
+        must_be(value, "value", str)
         must_be(by, "by", ByClause)
         #
 
@@ -82,7 +81,7 @@ class Browser(Chrome):
         """Wrapper to check for navigation issues, like 404's
         """
         # Contract
-        must_be(url, "url", basestring)
+        must_be(url, "url", str)
         #
         value = super(Browser, self).get(url)
         page_title = self.title
@@ -94,9 +93,9 @@ class Browser(Chrome):
         """Goes to a page in the app
         """
         # Contract
-        must_be(to, "to", (AppPage, basestring))
+        must_be(to, "to", (AppPage, str))
         #
-        if isinstance(to, basestring):
+        if isinstance(to, str):
             to = self.pages[to.lower()]
         url = "http://{host}:{port}/{page}".format(host=self.app_host, port=self.app_port, page=to.page)
         return_value = self.goto(url)
@@ -116,11 +115,11 @@ class Browser(Chrome):
         """Find, hover on, and click on the given element
         """
         # Contract
-        must_be(what, "element", basestring)
+        must_be(what, "element", str)
         must_be(by, "by", ByClause)
         must_be(hover_time, "hover_time", Number)
-        must_be(wait_for, "wait_for", (NoneType, basestring))
-        must_be(wait_for_by, "wait_for_by", (NoneType, ByClause))
+        must_be(wait_for, "wait_for", (type(None), str))
+        must_be(wait_for_by, "wait_for_by", (type(None), ByClause))
         #
         element = by.find(what, self)
         self.hover_on(element, hover_time)
@@ -174,11 +173,11 @@ class Browser(Chrome):
         """
         # Contract
         must_be(element, "element", WebElement)
-        must_be(text, "text", basestring)
+        must_be(text, "text", str)
         must_be(by, "by", ByClause)
         must_be(check, "check", bool)
-        must_be(check_against, "check_against", (NoneType, basestring))
-        must_be(check_attribute, "check_attribute", basestring)
+        must_be(check_against, "check_against", (type(None), str))
+        must_be(check_attribute, "check_attribute", str)
         must_be(empty, "empty", bool)
         #
         if empty:
@@ -194,12 +193,12 @@ class Browser(Chrome):
         """Finds and fills in an element with the given text.
         """
         # Contract
-        must_be(what, "element", basestring)
-        must_be(text, "text", basestring)
+        must_be(what, "element", str)
+        must_be(text, "text", str)
         must_be(by, "by", ByClause)
         must_be(check, "check", bool)
-        must_be(check_against, "check_against", (NoneType, basestring))
-        must_be(check_attribute, "check_attribute", basestring)
+        must_be(check_against, "check_against", (type(None), str))
+        must_be(check_attribute, "check_attribute", str)
         must_be(empty, "empty", bool)
         #
         element = by.find(what, self)
