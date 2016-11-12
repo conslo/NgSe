@@ -13,54 +13,22 @@ from .utils import retry
 from .page import AppPage
 from .by import By, ByClause
 from .contract import must_be
-from .exceptions import NavigationError, WaitFailedError, DontRetryError, FrontEndError
+from .exceptions import NavigationError, WaitFailedError, DontRetryError,\
+        FrontEndError
 from .exceptions import element_exceptions, cant_see_exceptions
 
 default_download_directory = "./tmp"
 
 
-class Browser(Chrome):
-    executable_path = '/usr/local/bin/chromedriver'
-    app_host = 'localhost'
-    app_port = 5000
-
-    def __init__(self, scenario, download_directory=default_download_directory, app_host=None, app_port=None,
-                 executable_path=None, pages=None):
-        # Contract
-        must_be(download_directory, "download_directory", (type(None), str))
-        must_be(app_host, "app_host", (type(None), str))
-        must_be(app_port, "app_port", (type(None), Number))
-        must_be(executable_path, "executable_path", (type(None), str))
-        must_be(pages, "pages", (dict, type(None)))
-        # TODO[TJ]: This should be implemented as part of the future contracts library
-        if pages is not None:
-            for key, value in pages.items():
-                must_be(key, "pages key", str)
-                must_be(value, "pages value", AppPage)
-        #
-        self.scenario = scenario
-        if download_directory is not None:
-            options = ChromeOptions()
-            prefs = {"download.default_directory": download_directory}
-            options.add_experimental_option('prefs', prefs)
-        else:
-            options = None
-        if app_host is not None:
-            self.app_host = app_host
-        if app_port is not None:
-            self.app_port = app_port
-        if executable_path is not None:
-            self.executable_path = executable_path
-        self.pages = pages
-        super(Browser, self).__init__(executable_path=self.executable_path, chrome_options=options)
-        register_exit(self.quit)
+class BrowserMixin(object):
 
     def quit(self):
         try:
             super(Browser, self).quit()
         except URLError as e:
             if e.reason.errno == 61 or e.reason.errno == 111:
-                # 'Connection refused', this happens when the driver has already closed/quit
+                # 'Connection refused', this happens when the driver has
+                # already closed/quit
                 pass
             else:
                 raise
@@ -68,7 +36,8 @@ class Browser(Chrome):
     def wait_for(self, value, by=By.ID, **kwargs):
         """Waits for an element according to the passed ByClause
 
-        This is really just a wrapper around passing the browser to a ByClause, allowing for much cleaner syntax.
+        This is really just a wrapper around passing the browser to a
+        ByClause, allowing for much cleaner syntax.
         """
         # Contract
         must_be(value, "value", str)
@@ -97,21 +66,23 @@ class Browser(Chrome):
         #
         if isinstance(to, str):
             to = self.pages[to.lower()]
-        url = "http://{host}:{port}/{page}".format(host=self.app_host, port=self.app_port, page=to.page)
+        url = "http://{host}:{port}/{page}".format(
+                host=self.app_host, port=self.app_port, page=to.page)
         return_value = self.goto(url)
         if to.wait_for is not None:
             try:
                 retry(to.wait_for_by.wait)(to.wait_for, self)
             except selenium_exceptions.NoSuchElementException:
                 raise NavigationError(
-                    "Expected element {}:{} didn't show when navigating to {}".format(
+                    "Expected element {}:{} didn't show when navigating to {}".format(  # nopep8
                         to.wait_for,
                         to.wait_for_by,
                         to.page))
         return return_value
 
     @retry(timeout=15)
-    def click(self, what, by=By.LINK_TEXT, hover_time=0.1, wait_for=None, wait_for_by=By.ID):
+    def click(self, what, by=By.LINK_TEXT, hover_time=0.1, wait_for=None,
+              wait_for_by=By.ID):
         """Find, hover on, and click on the given element
         """
         # Contract
@@ -125,11 +96,13 @@ class Browser(Chrome):
         self.hover_on(element, hover_time)
         return_value = element.click()
         if wait_for is not None:
-            # If this fails, we need the whole function to fail (don't want to re-do a successful click)
+            # If this fails, we need the whole function to fail (don't want to
+            # re-do a successful click)
             try:
                 wait_for_by.wait(wait_for, self)
             except cant_see_exceptions as e:
-                # TODO[TJ]: This custom exception feels clunky, only used for, and only outside of, the wait method
+                # TODO[TJ]: This custom exception feels clunky, only used for,
+                # and only outside of, the wait method
                 raise WaitFailedError("Wait failed", e)
             except element_exceptions as e:
                 # Some weird stuff, this shouldn't happen
@@ -144,14 +117,16 @@ class Browser(Chrome):
         must_be(element, "element", WebElement)
         must_be(wait_after, "wait_after", Number)
         #
-        """Currently a bug in the move_to_element on ActionChains, so we can't use it, must use JS instead.
-        This scrolls the element into the middle of the page, useful since we have the top and bottom fixed divs that
+        """Currently a bug in the move_to_element on ActionChains, so we can't
+        use it, must use JS instead. This scrolls the element into the middle
+        of the page, useful since we have the top and bottom fixed divs that
         will cover anything scrolled 'just to' the top or bottom.
         """
         self.execute_script(
             "Element.prototype.documentOffsetTop = function () {return this.offsetTop + ( this.offsetParent ? this.offsetParent.documentOffsetTop() : 0 );};")  # NOQA
         self.execute_script(
-            "window.scrollTo( 0, arguments[0].documentOffsetTop()-(window.innerHeight / 2 ));", element)
+            "window.scrollTo( 0, arguments[0].documentOffsetTop()-(window.innerHeight / 2 ));",  # nopep8
+            element)
         sleep(wait_after)
 
     def hover_on(self, element, hover_time=0.1):
@@ -167,9 +142,11 @@ class Browser(Chrome):
         return chain.perform()
 
     @staticmethod
-    def _fill(element, text, by=By.ID, check=True, check_against=None, check_attribute="value", empty=False):
-        """Fills in a given element with the given text, optionally checking emptying it first and/or checking the
-        contents after (optionally against a different value).
+    def _fill(element, text, by=By.ID, check=True, check_against=None,
+              check_attribute="value", empty=False):
+        """Fills in a given element with the given text, optionally checking
+        emptying it first and/or checking the contents after (optionally
+        against a different value).
         """
         # Contract
         must_be(element, "element", WebElement)
@@ -189,7 +166,8 @@ class Browser(Chrome):
             assert check_against in element.get_attribute(check_attribute)
         return return_value
 
-    def fill(self, what, text, by=By.ID, check=True, check_against=None, check_attribute="value", empty=False):
+    def fill(self, what, text, by=By.ID, check=True, check_against=None,
+             check_attribute="value", empty=False):
         """Finds and fills in an element with the given text.
         """
         # Contract
@@ -202,7 +180,8 @@ class Browser(Chrome):
         must_be(empty, "empty", bool)
         #
         element = by.find(what, self)
-        return self._fill(element, text, by, check, check_against, check_attribute, empty)
+        return self._fill(element, text, by, check, check_against,
+                          check_attribute, empty)
 
     @retry
     def wait_for_success(self):
@@ -241,3 +220,53 @@ class Browser(Chrome):
     @retry
     def _text_is_present(self, text):
         self.find_element_by_tag_name('body').text.index(text)
+
+
+class Browser(object):
+    def __init__(*args, **kwargs):
+        return ChromeBrowser(*args, **kwargs)
+
+
+class RemoteBrowser(BrowserMixin):
+    def __init__(self, scenario, app_host=None, app_port=None, pages=None):
+        pass
+
+
+class ChromeBrowser(BrowserMixin, Chrome):
+    executable_path = '/usr/local/bin/chromedriver'
+    app_host = 'localhost'
+    app_port = 5000
+
+    def __init__(self, scenario, download_directory=default_download_directory,
+                 app_host=None, app_port=None, executable_path=None,
+                 pages=None):
+        # Contract
+        must_be(download_directory, "download_directory", (type(None), str))
+        must_be(app_host, "app_host", (type(None), str))
+        must_be(app_port, "app_port", (type(None), Number))
+        must_be(executable_path, "executable_path", (type(None), str))
+        must_be(pages, "pages", (dict, type(None)))
+        # TODO[TJ]: This should be implemented as part of the future contracts
+        # library
+        if pages is not None:
+            for key, value in pages.items():
+                must_be(key, "pages key", str)
+                must_be(value, "pages value", AppPage)
+        #
+        self.scenario = scenario
+        if download_directory is not None:
+            options = ChromeOptions()
+            prefs = {"download.default_directory": download_directory}
+            options.add_experimental_option('prefs', prefs)
+        else:
+            options = None
+        if app_host is not None:
+            self.app_host = app_host
+        if app_port is not None:
+            self.app_port = app_port
+        if executable_path is not None:
+            self.executable_path = executable_path
+        self.pages = pages
+        super(Browser, self).__init__(executable_path=self.executable_path,
+                                      chrome_options=options)
+        register_exit(self.quit)
