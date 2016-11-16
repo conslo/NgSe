@@ -3,10 +3,11 @@ from numbers import Number
 from atexit import register as register_exit
 
 from urllib.error import URLError
-from selenium.webdriver import Chrome
+from selenium.webdriver import Chrome, Remote, DesiredCapabilities
 import selenium.common.exceptions as selenium_exceptions
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 
 from .utils import retry
@@ -24,7 +25,7 @@ class BrowserMixin(object):
 
     def quit(self):
         try:
-            super(Browser, self).quit()
+            super(BrowserMixin, self).quit()
         except URLError as e:
             if e.reason.errno == 61 or e.reason.errno == 111:
                 # 'Connection refused', this happens when the driver has
@@ -32,6 +33,10 @@ class BrowserMixin(object):
                 pass
             else:
                 raise
+        except WebDriverException:
+            # This happens when quit is called multiple times on the remote
+            # browser
+            pass
 
     def wait_for(self, value, by=By.ID, **kwargs):
         """Waits for an element according to the passed ByClause
@@ -52,7 +57,7 @@ class BrowserMixin(object):
         # Contract
         must_be(url, "url", str)
         #
-        value = super(Browser, self).get(url)
+        value = super(BrowserMixin, self).get(url)
         page_title = self.title
         if page_title in {'404 Not Found'}:
             raise NavigationError(page_title)
@@ -222,14 +227,27 @@ class BrowserMixin(object):
         self.find_element_by_tag_name('body').text.index(text)
 
 
-class Browser(object):
-    def __init__(*args, **kwargs):
-        return ChromeBrowser(*args, **kwargs)
+class RemoteBrowser(BrowserMixin, Remote):
+    def __init__(self, scenario, selenium_host, app_host=None, app_port=None,
+                 pages=None):
 
+        must_be(app_host, "app_host", (type(None), str))
+        must_be(app_port, "app_port", (type(None), Number))
+        must_be(pages, "pages", (dict, type(None)))
+        must_be(selenium_host, "selenium_host", str)
 
-class RemoteBrowser(BrowserMixin):
-    def __init__(self, scenario, app_host=None, app_port=None, pages=None):
-        pass
+        if pages is not None:
+            for key, value in pages.items():
+                must_be(key, "pages key", str)
+                must_be(value, "pages value", AppPage)
+
+        self.scenario = scenario
+        self.pages = pages
+
+        super(RemoteBrowser, self).__init__(
+            desired_capabilities=DesiredCapabilities.CHROME,
+            command_executor='http://amg-selenium-test.stage.zefr.com:4444/wd/hub')  # nopep8
+        register_exit(self.quit)
 
 
 class ChromeBrowser(BrowserMixin, Chrome):
@@ -267,6 +285,10 @@ class ChromeBrowser(BrowserMixin, Chrome):
         if executable_path is not None:
             self.executable_path = executable_path
         self.pages = pages
-        super(Browser, self).__init__(executable_path=self.executable_path,
-                                      chrome_options=options)
+        super(ChromeBrowser, self).__init__(
+            executable_path=self.executable_path, chrome_options=options)
         register_exit(self.quit)
+
+
+# XXX This is here for backwards compatablity, should be removed later
+Browser = ChromeBrowser
