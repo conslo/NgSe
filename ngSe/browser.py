@@ -243,6 +243,8 @@ class RemoteBrowser(BrowserMixin, Remote):
 
         self.scenario = scenario
         self.pages = pages
+        self.app_host = app_host
+        self.app_port = app_port
 
         super(RemoteBrowser, self).__init__(
             desired_capabilities=DesiredCapabilities.CHROME,
